@@ -20,7 +20,7 @@ from difflib import SequenceMatcher
 os.system("pkill -9 arecord > /dev/null 2>&1")
 
 # 1. GEMINI API AYARI
-GEMINI_API_KEY = "GOOGLE AI STUDIO GEMINI API KEYINIZ"
+GEMINI_API_KEY = "GEMINI API KEY"
 genai.configure(api_key=GEMINI_API_KEY)
 
 model = genai.GenerativeModel('gemini-2.5-flash')
@@ -170,6 +170,9 @@ def arecord_ile_dinle(dosya_adi="/dev/shm/gecici_ses.wav", uyanik_mod=False):
     if os.path.exists(dosya_adi):
         try: os.remove(dosya_adi)
         except: pass
+
+    # ---> YENİ EKLENEN SATIR (ALSA'yı rahatlatan zombi temizleyici) <---
+    os.system("pkill -9 arecord > /dev/null 2>&1")
 
     # arecord'u arka planda başlatıp canlı veriyi (stdout) Python'a boruluyoruz
     komut = f"arecord -D {MIKROFON_CIHAZI} -f S16_LE -r 16000 -c 1 -t wav"
@@ -482,18 +485,13 @@ while True:
                     ekolayzer_ayarla(gelen_ses)
                     continue
             
-            if "durdur" in gelen_ses or "kes" in gelen_ses or "beklet" in gelen_ses:
-                print("[SİSTEM] Müzik duraklatılıyor...")
-                subprocess.run("pkill -STOP mpv", shell=True) 
-                asistan_konus("Müzik durduruldu.")
+            if "durdur" in gelen_ses or "kes" in gelen_ses or "kapat" in gelen_ses:
+                print("[SİSTEM] Müzik tamamen kapatılıyor (Donanım kilitlenmemesi için)...")
+                subprocess.run("pkill -9 mpv", shell=True) 
+                asistan_konus("Müzik kapatıldı.")
                 continue
-
-            # "oynat" kelimesini buradan sildik! Sadece devam et komutları kaldı.
-            if "devam" in gelen_ses or "sürdür" in gelen_ses:
-                print("[SİSTEM] Müzik devam ettiriliyor...")
-                subprocess.run("pkill -CONT mpv", shell=True) 
-                asistan_konus("Devam ediliyor.")
-                continue
+            
+ 
                 
             # --- MÜZİK ÇALMA KONTROL MERKEZİ (UYKU MODU) ---
             if "çal" in gelen_ses or "oynat" in gelen_ses:
@@ -551,23 +549,18 @@ while True:
                 time.sleep(1)
                 continue
             
-        if "bas" in gelen_ses or "tiz" in gelen_ses:
-                # Eğer cümlenin içinde herhangi bir sayı varsa (yazıyla veya rakamla fark etmez)
-                if any(harf.isdigit() for harf in gelen_ses) or any(k in gelen_ses for k in ["bir","iki","üç","dört","beş","altı","yedi","sekiz","dokuz","on","eksi"]):
-                    ekolayzer_ayarla(gelen_ses)
-                    continue
+        if "bas" in komut or "tiz" in komut:
+            if any(harf.isdigit() for harf in komut) or any(k in komut for k in ["bir","iki", ...]):
+                ekolayzer_ayarla(komut)
+                continue
             
-        if "durdur" in gelen_ses or "kes" in gelen_ses or "beklet" in gelen_ses:
-            print("[SİSTEM] Müzik duraklatılıyor...")
-            subprocess.run("pkill -STOP mpv", shell=True) 
-            asistan_konus("Müzik durduruldu.")
-            continue
-
-        # "oynat" kelimesini buradan sildik! Sadece devam et komutları kaldı.
-        if "devam" in gelen_ses or "sürdür" in gelen_ses:
-            print("[SİSTEM] Müzik devam ettiriliyor...")
-            subprocess.run("pkill -CONT mpv", shell=True) 
-            asistan_konus("Devam ediliyor.")
+        if "durdur" in komut or "kes" in komut or "kapat" in komut:
+            print("[SİSTEM] Müzik tamamen kapatılıyor (Donanım kilitlenmemesi için)...")
+            subprocess.run("pkill -9 mpv", shell=True) 
+            asistan_konus("Müzik kapatıldı.")
+            chat = model.start_chat(history=[])
+            uyanik_mi = False
+            time.sleep(1)
             continue
             
         # --- MÜZİK ÇALMA KONTROL MERKEZİ (UYANIK MOD) ---
